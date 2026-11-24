@@ -1,4 +1,3 @@
-
 import json
 import subprocess
 from pathlib import Path
@@ -47,7 +46,10 @@ def run_command(command):
     return result
 
 
-def transcribe_video(video_path, progress=None):
+def transcribe_video(video_path, progress=None, output_dir=None):
+    output_dir = Path(output_dir or RESULTS)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     if progress:
         progress("Membaca audio dan membuat transkrip...")
 
@@ -62,10 +64,10 @@ def transcribe_video(video_path, progress=None):
     if not segments:
         raise RuntimeError("Transkrip tidak ditemukan.")
 
-    with open(RESULTS / "transcript.json", "w", encoding="utf-8") as f:
+    with open(output_dir / "transcript.json", "w", encoding="utf-8") as f:
         json.dump(segments, f, ensure_ascii=False, indent=4)
 
-    with open(RESULTS / "transcript.txt", "w", encoding="utf-8") as f:
+    with open(output_dir / "transcript.txt", "w", encoding="utf-8") as f:
         f.write(result.get("text", ""))
 
     return segments
@@ -84,12 +86,14 @@ def score_text(text):
     return score
 
 
-def analyze_moments(segments, clip_count, duration):
+def analyze_moments(segments, clip_count, duration, output_dir=None):
+    output_dir = Path(output_dir or RESULTS)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     total_duration = max(float(s["end"]) for s in segments)
     candidates = []
 
     step = max(5, duration // 3)
-
     start = 0
 
     while start < total_duration:
@@ -135,7 +139,7 @@ def analyze_moments(segments, clip_count, duration):
 
     chosen.sort(key=lambda x: x["start"])
 
-    with open(RESULTS / "moments.txt", "w", encoding="utf-8") as f:
+    with open(output_dir / "moments.txt", "w", encoding="utf-8") as f:
         f.write("HASIL ANALISIS MOMEN VIDEO\n\n")
 
         for i, item in enumerate(chosen, 1):
@@ -150,9 +154,12 @@ def analyze_moments(segments, clip_count, duration):
     return chosen
 
 
-def make_clip(video_path, item, index, duration):
+def make_clip(video_path, item, index, duration, output_dir=None):
+    output_dir = Path(output_dir or RESULTS)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     name = f"clip_{index:02d}_auto"
-    output = RESULTS / f"{name}.mp4"
+    output = output_dir / f"{name}.mp4"
 
     actual_duration = min(
         duration,
@@ -285,7 +292,6 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
     ass_path.write_text(ass_content, encoding="utf-8")
 
-    # Escape alamat Windows agar FFmpeg tidak salah membaca drive C:
     ass_filter_path = (
         ass_path.resolve()
         .as_posix()
@@ -308,13 +314,25 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     ])
 
 
-def process_video(video_path, clip_count=5, duration=45, progress=None):
+def process_video(
+    video_path,
+    clip_count=5,
+    duration=45,
+    progress=None,
+    output_dir=None
+):
     video_path = Path(video_path)
+    output_dir = Path(output_dir or RESULTS)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     if not video_path.exists():
         raise FileNotFoundError("Video sumber tidak ditemukan.")
 
-    segments = transcribe_video(video_path, progress)
+    segments = transcribe_video(
+        video_path,
+        progress,
+        output_dir
+    )
 
     if progress:
         progress("Menganalisis momen terbaik berdasarkan transkrip...")
@@ -322,7 +340,8 @@ def process_video(video_path, clip_count=5, duration=45, progress=None):
     moments = analyze_moments(
         segments,
         clip_count,
-        duration
+        duration,
+        output_dir
     )
 
     results = []
@@ -336,7 +355,8 @@ def process_video(video_path, clip_count=5, duration=45, progress=None):
             video_path,
             item,
             index,
-            duration
+            duration,
+            output_dir
         )
 
         if progress:
@@ -349,7 +369,7 @@ def process_video(video_path, clip_count=5, duration=45, progress=None):
             verbose=False
         )
 
-        srt_path = RESULTS / f"{name}_words.srt"
+        srt_path = output_dir / f"{name}_words.srt"
 
         make_word_srt(
             subtitle_result.get("segments", []),
@@ -358,7 +378,7 @@ def process_video(video_path, clip_count=5, duration=45, progress=None):
             srt_path
         )
 
-        final_path = RESULTS / f"{name}_FINAL.mp4"
+        final_path = output_dir / f"{name}_FINAL.mp4"
 
         if progress:
             progress(f"Memasang subtitle video {index}...")
