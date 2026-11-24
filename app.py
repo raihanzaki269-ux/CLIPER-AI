@@ -1,18 +1,17 @@
 import streamlit as st
-import tempfile
-import uuid
-from pathlib import Path
 from supabase import create_client
+from pathlib import Path
+import uuid
+import time
 import engine
 
 # =========================
-# APP CONFIGURATION
+# CONFIG
 # =========================
 st.set_page_config(
     page_title="CLIPER AI",
     page_icon="🎬",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
 ROOT = Path(__file__).parent
@@ -20,18 +19,21 @@ RESULTS = ROOT / "results"
 RESULTS.mkdir(exist_ok=True)
 
 SITE_URL = "https://cliper-ai-alfymantduy3dpvahsapppx.streamlit.app/"
+FOOTER = "CLIPER AI © 2026 | Created by Raihan Zaki"
 
 # =========================
-# SESSION STATE
+# SESSION
 # =========================
 defaults = {
     "language": "Indonesia",
     "access_token": None,
     "refresh_token": None,
-    "user": None,
-    "latest_outputs": [],
-    "auth_page": "Login",
+    "user_id": None,
+    "user_email": None,
+    "full_name": None,
+    "page": "Dashboard",
 }
+
 for key, value in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = value
@@ -39,167 +41,128 @@ for key, value in defaults.items():
 # =========================
 # LANGUAGE
 # =========================
-LANG = {
+TEXT = {
     "Indonesia": {
+        "dashboard": "Dashboard",
+        "clipper": "AI Clipper",
+        "videos": "Hasil Video",
+        "about": "Tentang",
+        "welcome": "Selamat datang di CLIPER AI",
+        "subtitle": "Ubah video panjang menjadi klip pendek secara otomatis dengan AI.",
+        "total": "Total Video",
+        "active": "Subtitle",
+        "format": "Format",
+        "quick": "Akses Cepat",
+        "start": "Mulai Membuat Klip",
+        "upload": "Upload Video",
+        "count": "Jumlah Klip",
+        "duration": "Durasi Klip (detik)",
+        "process": "Mulai Proses Video",
+        "processing": "Sedang memproses video...",
+        "download": "Download Video",
+        "empty": "Belum ada video. Mulai proses video pertamamu!",
+        "description": "CLIPER AI adalah aplikasi AI untuk memotong video panjang menjadi klip pendek dengan subtitle otomatis.",
+        "logout": "Keluar",
         "login": "Masuk",
         "register": "Daftar Akun",
-        "logout": "Keluar",
         "email": "Alamat Email",
-        "password": "Kata Sandi",
-        "full_name": "Nama Lengkap",
-        "login_title": "Masuk ke CLIPER AI",
-        "register_title": "Buat Akun CLIPER AI",
-        "login_button": "Masuk",
-        "register_button": "Daftar Sekarang",
-        "no_account": "Belum punya akun?",
-        "have_account": "Sudah punya akun?",
-        "check_email": "Pendaftaran berhasil. Silakan cek email untuk verifikasi akun sebelum login.",
-        "login_success": "Berhasil masuk!",
-        "dashboard": "Dashboard",
-        "clipper": "AI Clipper",
-        "library": "Hasil Video",
-        "about": "Tentang",
-        "welcome": "SELAMAT DATANG DI WORKSPACE ANDA",
-        "headline": "Buat Lebih Banyak. Edit Lebih Sedikit.",
-        "total": "Total Video Clip",
-        "subtitle": "Subtitle Otomatis",
-        "format": "Format Video",
-        "quick": "Akses Cepat",
-        "create": "Buat Clip Baru",
-        "my_videos": "Video Saya",
-        "upload": "Upload Video",
-        "clip_count": "Jumlah Clip",
-        "duration": "Durasi Setiap Clip (detik)",
-        "process": "Mulai Proses AI",
-        "processing": "AI sedang menganalisis video. Mohon tunggu...",
-        "done": "Proses selesai!",
-        "download": "Download Video",
-        "preview": "Preview Video",
-        "empty": "Belum ada video. Silakan buat clip terlebih dahulu.",
-        "about_text": "CLIPER AI adalah aplikasi pemotong video otomatis berbasis AI.",
-        "account": "Akun",
+        "password": "Password",
+        "name": "Nama Lengkap",
+        "login_btn": "Masuk ke Akun",
+        "register_btn": "Buat Akun",
+        "auth_title": "Selamat Datang di CLIPER AI",
+        "auth_desc": "Masuk atau daftar untuk mulai membuat klip video dengan AI.",
+        "choose": "Pilih menu",
+        "processing_done": "Proses selesai!",
+        "processing_error": "Terjadi kesalahan:",
+        "invalid_email": "Masukkan email yang valid.",
+        "password_short": "Password minimal 6 karakter.",
+        "name_required": "Nama lengkap harus diisi.",
+        "library": "Perpustakaan Video",
+        "no_file": "Silakan upload video terlebih dahulu.",
+        "about_title": "Tentang CLIPER AI",
         "language": "Bahasa",
-        "login_error": "Email atau kata sandi salah. Silakan coba lagi.",
-        "signup_error": "Pendaftaran gagal. Periksa kembali data Anda.",
-        "auth_error": "Tidak dapat terhubung ke layanan akun. Periksa konfigurasi Secrets.",
-        "processing_error": "Terjadi kesalahan saat memproses video.",
-        "name_required": "Nama lengkap wajib diisi.",
-        "email_required": "Email wajib diisi.",
-        "password_required": "Kata sandi minimal 6 karakter.",
-        "file_type": "Silakan upload file video MP4, MOV, atau MKV.",
-        "file_help": "Format yang didukung: MP4, MOV, MKV",
-        "profile": "Profil Pengguna",
-        "storage_note": "Catatan: video saat ini disimpan sementara di server aplikasi. Video dapat hilang ketika server dimulai ulang.",
+        "my_account": "Akun aktif",
+        "confirm_password": "Konfirmasi Password",
+        "password_mismatch": "Password dan konfirmasi tidak sama.",
+        "video_help": "Format video: MP4, MOV, MKV, AVI.",
+        "check_email": "Pendaftaran berhasil. Silakan cek email untuk verifikasi akun sebelum login.",
+        "login_success": "Login berhasil!",
+        "register_success": "Akun berhasil dibuat!",
+        "logout_success": "Kamu telah keluar dari akun.",
+        "upload_error": "Terjadi kesalahan saat upload atau memproses video."
     },
     "English": {
-        "login": "Login",
-        "register": "Create Account",
-        "logout": "Logout",
-        "email": "Email Address",
-        "password": "Password",
-        "full_name": "Full Name",
-        "login_title": "Login to CLIPER AI",
-        "register_title": "Create Your CLIPER AI Account",
-        "login_button": "Login",
-        "register_button": "Create Account",
-        "no_account": "Don't have an account?",
-        "have_account": "Already have an account?",
-        "check_email": "Registration successful. Please check your email to verify your account before logging in.",
-        "login_success": "Successfully logged in!",
         "dashboard": "Dashboard",
         "clipper": "AI Clipper",
-        "library": "My Videos",
+        "videos": "My Videos",
         "about": "About",
-        "welcome": "WELCOME TO YOUR WORKSPACE",
-        "headline": "Create More. Edit Less.",
-        "total": "Total Video Clips",
-        "subtitle": "Auto Subtitles",
-        "format": "Video Format",
+        "welcome": "Welcome to CLIPER AI",
+        "subtitle": "Turn long videos into short clips automatically with AI.",
+        "total": "Total Videos",
+        "active": "Subtitles",
+        "format": "Format",
         "quick": "Quick Access",
-        "create": "Create New Clip",
-        "my_videos": "My Videos",
+        "start": "Start Creating Clips",
         "upload": "Upload Video",
-        "clip_count": "Number of Clips",
+        "count": "Number of Clips",
         "duration": "Clip Duration (seconds)",
-        "process": "Start AI Processing",
-        "processing": "AI is analyzing your video. Please wait...",
-        "done": "Processing completed!",
+        "process": "Start Video Processing",
+        "processing": "Processing video...",
         "download": "Download Video",
-        "preview": "Video Preview",
-        "empty": "No videos yet. Create your first clip.",
-        "about_text": "CLIPER AI is an AI-powered automatic video clipping application.",
-        "account": "Account",
-        "language": "Language",
-        "login_error": "Incorrect email or password. Please try again.",
-        "signup_error": "Registration failed. Please check your information.",
-        "auth_error": "Unable to connect to the account service. Check your Secrets configuration.",
-        "processing_error": "An error occurred while processing the video.",
+        "empty": "No videos yet. Start processing your first video!",
+        "description": "CLIPER AI is an AI application that turns long videos into short clips with automatic subtitles.",
+        "logout": "Log Out",
+        "login": "Login",
+        "register": "Create Account",
+        "email": "Email Address",
+        "password": "Password",
+        "name": "Full Name",
+        "login_btn": "Sign In",
+        "register_btn": "Create Account",
+        "auth_title": "Welcome to CLIPER AI",
+        "auth_desc": "Sign in or create an account to start making AI video clips.",
+        "choose": "Choose a menu",
+        "processing_done": "Processing completed!",
+        "processing_error": "An error occurred:",
+        "invalid_email": "Please enter a valid email.",
+        "password_short": "Password must be at least 6 characters.",
         "name_required": "Full name is required.",
-        "email_required": "Email is required.",
-        "password_required": "Password must contain at least 6 characters.",
-        "file_type": "Please upload an MP4, MOV, or MKV video.",
-        "file_help": "Supported formats: MP4, MOV, MKV",
-        "profile": "User Profile",
-        "storage_note": "Note: videos are currently stored temporarily on the app server. They may disappear when the server restarts.",
+        "library": "Video Library",
+        "no_file": "Please upload a video first.",
+        "about_title": "About CLIPER AI",
+        "language": "Language",
+        "my_account": "Active account",
+        "confirm_password": "Confirm Password",
+        "password_mismatch": "Passwords do not match.",
+        "video_help": "Supported formats: MP4, MOV, MKV, AVI.",
+        "check_email": "Registration successful. Please check your email to verify your account before logging in.",
+        "login_success": "Login successful!",
+        "register_success": "Account created successfully!",
+        "logout_success": "You have logged out.",
+        "upload_error": "An error occurred while uploading or processing the video."
     }
 }
 
 def tr(key):
-    return LANG[st.session_state.language][key]
+    return TEXT[st.session_state.language][key]
 
 # =========================
-# SUPABASE CONNECTION
-# =========================
-@st.cache_resource
-def get_supabase_config():
-    return {
-        "url": st.secrets["supabase"]["url"],
-        "key": st.secrets["supabase"]["publishable_key"],
-    }
-
-try:
-    config = get_supabase_config()
-    supabase = create_client(config["url"], config["key"])
-except Exception:
-    st.error("Supabase configuration error. Please check Streamlit Secrets.")
-    st.stop()
-
-# Restore the user's session on each rerun.
-if (
-    st.session_state.access_token
-    and st.session_state.refresh_token
-    and st.session_state.user is None
-):
-    try:
-        auth_response = supabase.auth.set_session(
-            st.session_state.access_token,
-            st.session_state.refresh_token
-        )
-        st.session_state.user = auth_response.user
-        if auth_response.session:
-            st.session_state.access_token = auth_response.session.access_token
-            st.session_state.refresh_token = auth_response.session.refresh_token
-    except Exception:
-        st.session_state.access_token = None
-        st.session_state.refresh_token = None
-        st.session_state.user = None
-
-# =========================
-# DARK PROFESSIONAL STYLE
+# STYLE
 # =========================
 st.markdown("""
 <style>
 .stApp {
-    background: #080d18;
+    background: #090d18;
     color: #f1f5f9;
 }
 [data-testid="stSidebar"] {
     background: #101827;
-    border-right: 1px solid #263247;
+    border-right: 1px solid #263449;
 }
 .block-container {
     padding-top: 2rem;
-    max-width: 1250px;
+    padding-bottom: 3rem;
 }
 h1, h2, h3 {
     color: #f8fafc;
@@ -208,164 +171,250 @@ p, label, span {
     color: #cbd5e1;
 }
 div[data-testid="stMetric"] {
-    background: #111c2e;
-    border: 1px solid #263750;
+    background: #131f32;
+    border: 1px solid #263449;
     padding: 18px;
     border-radius: 14px;
 }
-.stButton > button {
+div.stButton > button {
     background: #2563eb;
     color: white;
     border: 0;
     border-radius: 9px;
-    padding: 0.55rem 1.2rem;
+    min-height: 42px;
     font-weight: 600;
 }
-.stButton > button:hover {
+div.stButton > button:hover {
     background: #1d4ed8;
     color: white;
 }
 div[data-testid="stFileUploader"] {
     background: #111c2e;
-    border: 1px dashed #3b4d68;
+    border: 1px dashed #475569;
     border-radius: 12px;
     padding: 12px;
+}
+.card {
+    background: #111c2e;
+    border: 1px solid #263449;
+    padding: 22px;
+    border-radius: 15px;
+    margin-bottom: 15px;
+}
+.app-footer {
+    text-align: center;
+    color: #64748b;
+    font-size: 13px;
+    padding: 24px 0 10px 0;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # =========================
-# AUTHENTICATION PAGE
+# SUPABASE
 # =========================
-def show_auth():
-    st.markdown("<h1 style='text-align:center'>🎬 CLIPER AI</h1>", unsafe_allow_html=True)
+try:
+    config = {
+        "url": st.secrets["supabase"]["url"],
+        "key": st.secrets["supabase"]["publishable_key"]
+    }
+    supabase = create_client(config["url"], config["key"])
+except Exception:
+    st.error("Supabase connection error. Check Streamlit Secrets.")
+    st.stop()
+
+def clear_auth():
+    for key in [
+        "access_token",
+        "refresh_token",
+        "user_id",
+        "user_email",
+        "full_name"
+    ]:
+        st.session_state[key] = None
+
+def restore_session():
+    access = st.session_state.access_token
+    refresh = st.session_state.refresh_token
+
+    if not access or not refresh:
+        return
+
+    try:
+        response = supabase.auth.set_session(access, refresh)
+        session = response.session
+        user = response.user
+
+        if session:
+            st.session_state.access_token = session.access_token
+            st.session_state.refresh_token = session.refresh_token
+
+        if user:
+            st.session_state.user_id = str(user.id)
+            st.session_state.user_email = user.email
+            metadata = getattr(user, "user_metadata", {}) or {}
+            st.session_state.full_name = metadata.get("full_name", "")
+    except Exception:
+        clear_auth()
+
+def save_auth(response):
+    session = response.session
+    user = response.user
+
+    if not session or not user:
+        return False
+
+    st.session_state.access_token = session.access_token
+    st.session_state.refresh_token = session.refresh_token
+    st.session_state.user_id = str(user.id)
+    st.session_state.user_email = user.email
+
+    metadata = getattr(user, "user_metadata", {}) or {}
+    st.session_state.full_name = metadata.get("full_name", "")
+    return True
+
+restore_session()
+
+# =========================
+# USER STORAGE
+# =========================
+def get_user_folder():
+    folder = RESULTS / st.session_state.user_id
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder
+
+def get_user_videos():
+    folder = get_user_folder()
+    videos = list(folder.glob("*/*_FINAL.mp4"))
+    videos.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    return videos
+
+# =========================
+# FOOTER
+# =========================
+def show_footer():
     st.markdown(
-        "<p style='text-align:center;color:#94a3b8'>INTELLIGENT VIDEO CLIPPING</p>",
+        f'<div class="app-footer">{FOOTER}</div>',
         unsafe_allow_html=True
     )
 
-    left, center, right = st.columns([1, 1.3, 1])
+# =========================
+# AUTH SCREEN
+# =========================
+if not st.session_state.user_id:
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    left, center, right = st.columns([1, 1.5, 1])
 
     with center:
-        st.selectbox(
-            tr("language"),
-            ["Indonesia", "English"],
-            key="language"
+        st.markdown(
+            "<h1 style='text-align:center'>🎬 CLIPER AI</h1>",
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            f"<p style='text-align:center'>{tr('auth_title')}</p>",
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            f"<p style='text-align:center;color:#94a3b8'>{tr('auth_desc')}</p>",
+            unsafe_allow_html=True
         )
 
-        st.markdown("---")
-
-        auth_choice = st.radio(
-            "Account",
+        choice = st.radio(
+            tr("choose"),
             [tr("login"), tr("register")],
-            horizontal=True,
-            label_visibility="collapsed"
+            horizontal=True
         )
 
-        if auth_choice == tr("login"):
-            st.subheader(tr("login_title"))
-
+        if choice == tr("login"):
             with st.form("login_form"):
                 email = st.text_input(tr("email"))
-                password = st.text_input(tr("password"), type="password")
+                password = st.text_input(
+                    tr("password"),
+                    type="password"
+                )
                 submitted = st.form_submit_button(
-                    tr("login_button"),
+                    tr("login_btn"),
                     use_container_width=True
                 )
 
             if submitted:
-                if not email.strip():
-                    st.warning(tr("email_required"))
-                elif not password:
-                    st.warning(tr("password_required"))
+                if not email.strip() or "@" not in email:
+                    st.error(tr("invalid_email"))
+                elif len(password) < 6:
+                    st.error(tr("password_short"))
                 else:
                     try:
                         response = supabase.auth.sign_in_with_password({
                             "email": email.strip(),
                             "password": password
                         })
-
-                        if response.session:
-                            st.session_state.access_token = response.session.access_token
-                            st.session_state.refresh_token = response.session.refresh_token
-                            st.session_state.user = response.user
-                            st.session_state.latest_outputs = []
+                        if save_auth(response):
                             st.success(tr("login_success"))
+                            time.sleep(0.5)
                             st.rerun()
                         else:
-                            st.error(tr("login_error"))
-                    except Exception:
-                        st.error(tr("login_error"))
+                            st.error(tr("check_email"))
+                    except Exception as e:
+                        st.error(f"Login gagal: {str(e)}")
 
         else:
-            st.subheader(tr("register_title"))
-
             with st.form("register_form"):
-                full_name = st.text_input(tr("full_name"))
+                full_name = st.text_input(tr("name"))
                 email = st.text_input(tr("email"))
-                password = st.text_input(tr("password"), type="password")
+                password = st.text_input(
+                    tr("password"),
+                    type="password"
+                )
+                confirm = st.text_input(
+                    tr("confirm_password"),
+                    type="password"
+                )
                 submitted = st.form_submit_button(
-                    tr("register_button"),
+                    tr("register_btn"),
                     use_container_width=True
                 )
 
             if submitted:
                 if not full_name.strip():
-                    st.warning(tr("name_required"))
-                elif not email.strip():
-                    st.warning(tr("email_required"))
+                    st.error(tr("name_required"))
+                elif not email.strip() or "@" not in email:
+                    st.error(tr("invalid_email"))
                 elif len(password) < 6:
-                    st.warning(tr("password_required"))
+                    st.error(tr("password_short"))
+                elif password != confirm:
+                    st.error(tr("password_mismatch"))
                 else:
                     try:
                         response = supabase.auth.sign_up({
                             "email": email.strip(),
                             "password": password,
                             "options": {
-                                "data": {"full_name": full_name.strip()},
+                                "data": {
+                                    "full_name": full_name.strip()
+                                },
                                 "email_redirect_to": SITE_URL
                             }
                         })
 
-                        if response.session:
-                            st.session_state.access_token = response.session.access_token
-                            st.session_state.refresh_token = response.session.refresh_token
-                            st.session_state.user = response.user
-                            st.success(tr("login_success"))
+                        if response.session and save_auth(response):
+                            st.success(tr("register_success"))
                             st.rerun()
                         else:
                             st.success(tr("check_email"))
-                    except Exception:
-                        st.error(tr("signup_error"))
+                    except Exception as e:
+                        st.error(f"Registrasi gagal: {str(e)}")
 
-        st.markdown("---")
-        st.caption("CLIPER AI © 2026")
+        show_footer()
 
-# =========================
-# LOGIN GATE
-# =========================
-if st.session_state.user is None:
-    show_auth()
     st.stop()
-
-user = st.session_state.user
-user_id = str(user.id)
-
-# Every user gets a separate folder.
-USER_ROOT = RESULTS / user_id
-USER_ROOT.mkdir(parents=True, exist_ok=True)
-
-def get_user_videos():
-    videos = list(USER_ROOT.glob("*/*_FINAL.mp4"))
-    videos.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-    return videos
 
 # =========================
 # SIDEBAR
 # =========================
 with st.sidebar:
     st.markdown("# 🎬 CLIPER AI")
-    st.caption("INTELLIGENT VIDEO CLIPPING")
+    st.caption("AI Video Clipping Platform")
     st.divider()
 
     st.selectbox(
@@ -374,220 +423,256 @@ with st.sidebar:
         key="language"
     )
 
-    pages = [
+    st.divider()
+    st.markdown(f"**{tr('my_account')}**")
+    st.write(st.session_state.user_email)
+
+    if st.session_state.full_name:
+        st.caption(st.session_state.full_name)
+
+    st.divider()
+
+    menu_items = [
         tr("dashboard"),
         tr("clipper"),
-        tr("library"),
+        tr("videos"),
         tr("about")
     ]
 
-    page = st.radio("MENU", pages, label_visibility="collapsed")
+    selected = st.radio(
+        tr("choose"),
+        menu_items,
+        key="menu_selection"
+    )
+    st.session_state.page = selected
 
     st.divider()
-    st.caption(tr("profile"))
-    st.write(user.email or "User")
 
     if st.button(tr("logout"), use_container_width=True):
         try:
             supabase.auth.sign_out()
         except Exception:
             pass
-
-        st.session_state.access_token = None
-        st.session_state.refresh_token = None
-        st.session_state.user = None
-        st.session_state.latest_outputs = []
+        clear_auth()
         st.rerun()
 
 # =========================
 # DASHBOARD
 # =========================
+page = st.session_state.page
+videos = get_user_videos()
+
 if page == tr("dashboard"):
-    videos = get_user_videos()
 
-    st.caption(tr("welcome"))
-    st.title(tr("headline"))
-    st.write("CLIPER AI — Your personal AI video workspace.")
+    st.title(f"👋 {tr('welcome')}")
+    st.write(tr("subtitle"))
 
-    col1, col2, col3 = st.columns(3)
+    st.markdown("<br>", unsafe_allow_html=True)
 
-    with col1:
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
         st.metric(tr("total"), len(videos))
-    with col2:
-        st.metric(tr("subtitle"), "ACTIVE")
-    with col3:
+    with c2:
+        st.metric(tr("active"), "ACTIVE")
+    with c3:
         st.metric(tr("format"), "9:16")
 
     st.markdown("---")
     st.subheader(tr("quick"))
 
-    col1, col2 = st.columns(2)
+    a, b = st.columns(2)
 
-    with col1:
-        st.markdown("### 🎬 AI Clipper")
-        st.write("Automatically find interesting moments and create short videos.")
-        if st.button(tr("create"), use_container_width=True):
-            st.session_state["go_to_clipper"] = True
+    with a:
+        st.markdown(
+            f"<div class='card'><h3>🎬 AI Clipper</h3>"
+            f"<p>{tr('subtitle')}</p></div>",
+            unsafe_allow_html=True
+        )
+        if st.button(tr("start"), use_container_width=True):
+            st.session_state.page = tr("clipper")
             st.rerun()
 
-    with col2:
-        st.markdown("### 📁 " + tr("my_videos"))
-        st.write("View and download your processed clips.")
-        if st.button(tr("my_videos"), use_container_width=True):
-            st.session_state["go_to_library"] = True
+    with b:
+        st.markdown(
+            f"<div class='card'><h3>📁 {tr('videos')}</h3>"
+            f"<p>{tr('library')}</p></div>",
+            unsafe_allow_html=True
+        )
+        if st.button(tr("videos"), use_container_width=True):
+            st.session_state.page = tr("videos")
             st.rerun()
 
-    st.caption(tr("storage_note"))
+    st.markdown("---")
+    st.subheader(tr("library"))
+
+    if videos:
+        for video in videos[:3]:
+            st.write(f"🎥 {video.name}")
+    else:
+        st.info(tr("empty"))
+
+    show_footer()
 
 # =========================
 # AI CLIPPER
 # =========================
-elif page == tr("clipper") or st.session_state.get("go_to_clipper", False):
-    st.session_state["go_to_clipper"] = False
+elif page == tr("clipper"):
 
     st.title("🎬 AI Clipper")
-    st.write("Upload a long video and let AI find interesting moments.")
+    st.write(tr("subtitle"))
+    st.markdown("---")
 
     uploaded_file = st.file_uploader(
         tr("upload"),
-        type=["mp4", "mov", "mkv"],
-        help=tr("file_help")
+        type=["mp4", "mov", "mkv", "avi"],
+        help=tr("video_help")
     )
 
     col1, col2 = st.columns(2)
 
     with col1:
-        clip_count = st.number_input(
-            tr("clip_count"),
-            min_value=1,
-            max_value=20,
-            value=5,
-            step=1
+        clip_count = st.slider(
+            tr("count"), 1, 10, 5
         )
 
     with col2:
-        duration = st.number_input(
-            tr("duration"),
-            min_value=15,
-            max_value=90,
-            value=45,
-            step=5
+        duration = st.slider(
+            tr("duration"), 15, 90, 45
         )
 
-    if uploaded_file is not None:
+    if uploaded_file:
         st.video(uploaded_file)
 
         if st.button(tr("process"), use_container_width=True):
-            extension = Path(uploaded_file.name).suffix.lower()
+            user_folder = get_user_folder()
+            run_folder = user_folder / uuid.uuid4().hex
+            run_folder.mkdir(parents=True, exist_ok=True)
 
-            if extension not in [".mp4", ".mov", ".mkv"]:
-                st.error(tr("file_type"))
-            else:
-                run_dir = USER_ROOT / uuid.uuid4().hex
-                run_dir.mkdir(parents=True, exist_ok=True)
-                input_path = run_dir / f"uploaded_video{extension}"
+            suffix = Path(uploaded_file.name).suffix or ".mp4"
+            input_path = run_folder / f"source{suffix}"
 
+            try:
+                with open(input_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+
+                def update_progress(*args):
+                    for item in args:
+                        if isinstance(item, (int, float)):
+                            progress_bar.progress(
+                                max(0, min(100, int(item)))
+                            )
+                        elif isinstance(item, str):
+                            status_text.info(item)
+
+                with st.spinner(tr("processing")):
+                    output_paths = engine.process_video(
+                        str(input_path),
+                        clip_count=clip_count,
+                        duration=duration,
+                        progress=update_progress,
+                        output_dir=run_folder
+                    )
+
+                progress_bar.progress(100)
+                status_text.success(tr("processing_done"))
+                st.balloons()
+
+                for path in output_paths:
+                    path = Path(path)
+
+                    if path.exists():
+                        st.markdown(f"### 🎥 {path.name}")
+                        st.video(str(path))
+
+                        with open(path, "rb") as f:
+                            st.download_button(
+                                f"{tr('download')} - {path.name}",
+                                data=f.read(),
+                                file_name=path.name,
+                                mime="video/mp4",
+                                key=f"download_{path.name}"
+                            )
+
+            except Exception as e:
+                st.error(f"{tr('processing_error')} {str(e)}")
+
+            finally:
                 try:
-                    with open(input_path, "wb") as f:
-                        f.write(uploaded_file.getbuffer())
+                    if input_path.exists():
+                        input_path.unlink()
+                except Exception:
+                    pass
 
-                    with st.spinner(tr("processing")):
-                        output_paths = engine.process_video(
-                            str(input_path),
-                            clip_count=int(clip_count),
-                            duration=int(duration),
-                            output_dir=str(run_dir)
-                        )
+    else:
+        st.info(tr("no_file"))
 
-                    st.session_state.latest_outputs = [
-                        str(p) for p in output_paths
-                    ]
-
-                    st.success(tr("done"))
-
-                except Exception as error:
-                    st.error(tr("processing_error"))
-                    st.exception(error)
-
-                finally:
-                    try:
-                        if input_path.exists():
-                            input_path.unlink()
-                    except Exception:
-                        pass
-
-    # Show the latest clips from this user's session.
-    latest = [
-        Path(p) for p in st.session_state.latest_outputs
-        if Path(p).exists() and USER_ROOT in Path(p).parents
-    ]
-
-    if latest:
-        st.markdown("---")
-        st.subheader("🎉 " + tr("done"))
-
-        for index, video_path in enumerate(latest, start=1):
-            st.markdown(f"### Clip {index}")
-            st.video(str(video_path))
-
-            with open(video_path, "rb") as video_file:
-                st.download_button(
-                    label=f"{tr('download')} {index}",
-                    data=video_file.read(),
-                    file_name=video_path.name,
-                    mime="video/mp4",
-                    key=f"download_latest_{index}"
-                )
+    show_footer()
 
 # =========================
 # VIDEO LIBRARY
 # =========================
-elif page == tr("library") or st.session_state.get("go_to_library", False):
-    st.session_state["go_to_library"] = False
+elif page == tr("videos"):
 
-    st.title("📁 " + tr("library"))
+    st.title(f"📁 {tr('videos')}")
+    st.write(tr("library"))
+    st.markdown("---")
 
     videos = get_user_videos()
 
     if not videos:
         st.info(tr("empty"))
     else:
-        st.write(f"{len(videos)} video clip(s)")
+        for index, video in enumerate(videos):
+            with st.container(border=True):
+                st.markdown(f"### 🎬 {video.name}")
+                st.caption(
+                    time.strftime(
+                        "%d-%m-%Y %H:%M",
+                        time.localtime(video.stat().st_mtime)
+                    )
+                )
 
-        for index, video_path in enumerate(videos, start=1):
-            with st.container():
-                st.markdown(f"### Clip {index}")
-                st.video(str(video_path))
+                st.video(str(video))
 
-                with open(video_path, "rb") as video_file:
+                with open(video, "rb") as f:
                     st.download_button(
                         tr("download"),
-                        data=video_file.read(),
-                        file_name=video_path.name,
+                        data=f.read(),
+                        file_name=video.name,
                         mime="video/mp4",
                         key=f"library_download_{index}"
                     )
 
-                st.divider()
-
-    st.caption(tr("storage_note"))
+    show_footer()
 
 # =========================
 # ABOUT
 # =========================
 elif page == tr("about"):
-    st.title("ℹ️ " + tr("about"))
-    st.markdown("## CLIPER AI")
-    st.write(tr("about_text"))
 
-    st.markdown("""
-    ### Features
-    - AI-powered video moment detection
-    - Automatic short video creation
-    - Word-by-word subtitles
-    - Vertical video format (9:16)
-    - Personal user accounts
-    - Indonesian and English interface
-    """)
+    st.title(f"ℹ️ {tr('about_title')}")
 
-    st.caption("Created with Streamlit and AI technology.")
+    st.markdown(
+        f"""
+        <div class="card">
+            <h2>🎬 CLIPER AI</h2>
+            <p>{tr('description')}</p>
+            <hr>
+            <p><b>Features</b></p>
+            <ul>
+                <li>AI video moment detection</li>
+                <li>Automatic subtitles</li>
+                <li>Vertical 9:16 video format</li>
+                <li>Personal video library</li>
+                <li>Secure user authentication</li>
+            </ul>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    show_footer()
