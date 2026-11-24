@@ -6,7 +6,7 @@ import engine
 
 st.set_page_config(
     page_title="CLIPER AI",
-    page_icon="🌊",
+    page_icon="🎬",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -19,88 +19,197 @@ UPLOADS.mkdir(exist_ok=True)
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+    --bg: #080b14;
+    --panel: #111827;
+    --panel2: #151e30;
+    --border: #27334a;
+    --blue: #4285ff;
+    --purple: #865cff;
+    --text: #f4f6ff;
+    --muted: #98a5bd;
+}
 
 .stApp {
-    background: #061827;
-    color: #edfaff;
+    background: var(--bg);
+    color: var(--text);
     font-family: 'Inter', sans-serif;
 }
+
+[data-testid="stHeader"] {
+    background: transparent;
+}
+
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #092b43, #061827);
-    border-right: 1px solid #164b67;
+    background: #0d1220;
+    border-right: 1px solid var(--border);
 }
-[data-testid="stSidebar"] * { color: #e7f8ff !important; }
+
+[data-testid="stSidebar"] * {
+    color: #e8edff;
+}
+
 .block-container {
-    padding-top: 2rem;
-    padding-bottom: 3rem;
     max-width: 1450px;
+    padding-top: 2.2rem;
+    padding-bottom: 4rem;
 }
+
 h1, h2, h3 {
-    color: #f0fbff !important;
+    color: var(--text) !important;
     font-weight: 800 !important;
 }
-p, label { color: #b6d1df; }
+
+p, label {
+    color: var(--muted);
+}
+
 .hero {
-    background: linear-gradient(115deg, #0b3d5c, #087ea4, #06415d);
-    padding: 35px;
-    border-radius: 22px;
-    border: 1px solid #268bab;
-    margin-bottom: 25px;
-    box-shadow: 0 12px 35px #00101d80;
+    background: linear-gradient(120deg, #172b50, #29205b 60%, #171d39);
+    border: 1px solid #46518c;
+    border-radius: 24px;
+    padding: 38px;
+    margin-bottom: 28px;
+    box-shadow: 0 15px 50px #00000050;
 }
+
 .hero h1 {
-    font-size: 42px;
-    margin: 0;
+    font-size: clamp(30px, 5vw, 48px);
     color: white !important;
+    margin: 8px 0;
+    letter-spacing: -1.5px;
 }
-.hero p { color: #d8f5ff !important; font-size: 16px; }
-.metric-card {
-    background: linear-gradient(145deg, #103650, #0a263b);
-    border: 1px solid #1c607e;
-    border-radius: 16px;
-    padding: 22px;
-    min-height: 115px;
+
+.hero p {
+    color: #c5d2f5 !important;
+    font-size: 15px;
 }
-.metric-title { color: #9fc9db; font-size: 13px; }
-.metric-value {
-    color: #ffffff;
-    font-size: 29px;
+
+.eyebrow {
+    color: #9eaeff;
+    font-size: 11px;
     font-weight: 800;
-    margin-top: 8px;
+    letter-spacing: 2px;
 }
-.section-card {
-    background: #0b263a;
-    border: 1px solid #164b67;
-    padding: 23px;
+
+.metric-card {
+    background: linear-gradient(145deg, #18243a, #111827);
+    border: 1px solid var(--border);
     border-radius: 18px;
+    padding: 23px;
+    min-height: 125px;
+    box-shadow: 0 8px 25px #00000025;
+}
+
+.metric-title {
+    color: #9eacc6;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.metric-value {
+    color: white;
+    font-size: 30px;
+    font-weight: 900;
+    margin-top: 12px;
+}
+
+.section-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
     margin-bottom: 20px;
 }
+
+.quick-card {
+    background: linear-gradient(145deg, #17233a, #111827);
+    border: 1px solid #34415f;
+    border-radius: 19px;
+    padding: 24px;
+    min-height: 155px;
+}
+
+.quick-card h3 {
+    font-size: 19px;
+}
+
 div[data-testid="stFileUploader"] {
-    background: #0d3048;
-    border: 1px dashed #35a9cc;
-    border-radius: 15px;
-    padding: 18px;
+    background: #111b2d;
+    border: 1px dashed #667eea;
+    border-radius: 17px;
+    padding: 20px;
 }
-.stButton button, .stDownloadButton button {
-    background: linear-gradient(100deg, #087ea4, #19a9c9);
+
+.stButton button,
+.stDownloadButton button {
+    background: linear-gradient(100deg, #426bff, #865cff);
     color: white;
     border: 0;
-    border-radius: 11px;
-    font-weight: 700;
-    min-height: 43px;
+    border-radius: 12px;
+    min-height: 46px;
+    font-weight: 800;
+    transition: 0.2s;
 }
-.stButton button:hover, .stDownloadButton button:hover {
-    background: #25b8d7;
+
+.stButton button:hover,
+.stDownloadButton button:hover {
+    background: linear-gradient(100deg, #6285ff, #a17cff);
     color: white;
     border: 0;
+    transform: translateY(-1px);
 }
+
 div[data-baseweb="select"] > div {
-    background: #103650;
-    border-color: #1c607e;
+    background: #18243a;
+    border-color: #34415f;
 }
-hr { border-color: #164b67; }
-.small-note { color: #83aebe; font-size: 12px; }
+
+.stRadio label {
+    color: #e8edff !important;
+}
+
+hr {
+    border-color: var(--border);
+}
+
+.small-note {
+    color: #7888a5;
+    font-size: 12px;
+}
+
+[data-testid="stMetric"] {
+    background: #151e30;
+    border: 1px solid #27334a;
+    padding: 15px;
+    border-radius: 14px;
+}
+
+[data-testid="stProgressBar"] > div > div {
+    background: linear-gradient(90deg, #426bff, #a17cff);
+}
+
+@media (max-width: 768px) {
+    .block-container {
+        padding: 1rem 1rem 3rem;
+    }
+    .hero {
+        padding: 25px 20px;
+        border-radius: 18px;
+    }
+    .metric-card {
+        padding: 15px;
+        min-height: 105px;
+    }
+    .metric-value {
+        font-size: 23px;
+    }
+    .section-card {
+        padding: 17px;
+    }
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -115,44 +224,51 @@ def get_final_videos():
 
 with st.sidebar:
     st.markdown("""
-    <div style="padding:12px 5px 20px;">
-        <div style="font-size:32px;font-weight:800;color:#43c9e5;">
-            🌊 CLIPER AI
+    <div style="padding:15px 5px 20px;">
+        <div style="font-size:29px;font-weight:900;letter-spacing:-1px;">
+            <span style="color:#6e8cff;">✦</span>
+            <span style="color:white;">CLIPER</span>
+            <span style="color:#9b7cff;">AI</span>
         </div>
-        <div style="font-size:12px;color:#9fc9db;">
+        <div style="font-size:10px;letter-spacing:2px;color:#8292b5;">
             INTELLIGENT VIDEO CLIPPING
         </div>
     </div>
     """, unsafe_allow_html=True)
 
     st.divider()
+
     page = st.radio(
-        "MAIN MENU",
+        "WORKSPACE",
         ["Dashboard", "AI Clipper", "Hasil Video", "Tentang"]
     )
+
     st.divider()
 
     st.markdown("""
     <div style="padding:10px 0;">
-        <div style="font-size:12px;color:#83aebe;">CREATED BY</div>
-        <b>Raihan Zaki</b>
-        <div style="font-size:12px;color:#83aebe;">Founder & Developer</div>
+        <div style="font-size:11px;color:#8292b5;letter-spacing:1px;">
+            CREATED BY
+        </div>
+        <div style="font-weight:800;margin-top:5px;">Raihan Zaki</div>
+        <div style="font-size:12px;color:#8292b5;">
+            Founder & Developer
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
 
 if page == "Dashboard":
+    videos = get_final_videos()
+
     st.markdown("""
     <div class="hero">
-        <div style="font-size:13px;letter-spacing:2px;color:#b9efff;">
-            WELCOME TO YOUR WORKSPACE
-        </div>
-        <h1>Video Creation, Simplified.</h1>
-        <p>Ubah video panjang menjadi konten pendek yang menarik dengan CLIPER AI.</p>
+        <div class="eyebrow">WELCOME TO YOUR WORKSPACE</div>
+        <h1>Create More. Edit Less.</h1>
+        <p>Turn long videos into engaging short-form content with the power of AI.</p>
     </div>
     """, unsafe_allow_html=True)
 
-    videos = get_final_videos()
     c1, c2, c3 = st.columns(3)
 
     with c1:
@@ -180,48 +296,66 @@ if page == "Dashboard":
         """, unsafe_allow_html=True)
 
     st.write("")
-    st.subheader("🚀 Quick Access")
+    st.subheader("⚡ Quick Access")
+
     a, b = st.columns(2)
 
     with a:
         st.markdown("""
-        <div class="section-card">
-            <h3>🎞️ AI Clipper</h3>
-            <p>Upload video dan buat beberapa clip secara otomatis.</p>
+        <div class="quick-card">
+            <h3>🎬 AI Clipper</h3>
+            <p>Automatically find interesting moments and create short videos.</p>
         </div>
         """, unsafe_allow_html=True)
+
+        if st.button("OPEN AI CLIPPER →", use_container_width=True):
+            st.session_state["menu_page"] = "AI Clipper"
+            st.rerun()
 
     with b:
         st.markdown("""
-        <div class="section-card">
-            <h3>📂 Hasil Video</h3>
-            <p>Lihat, putar, dan download video hasil pemrosesan.</p>
+        <div class="quick-card">
+            <h3>📁 Video Library</h3>
+            <p>Watch and download your processed video clips.</p>
         </div>
         """, unsafe_allow_html=True)
 
-    st.caption("CLIPER AI • Ocean Blue Edition")
+        if st.button("VIEW MY VIDEOS →", use_container_width=True):
+            st.session_state["menu_page"] = "Hasil Video"
+            st.rerun()
+
+    st.caption("CLIPER AI • DARK PROFESSIONAL EDITION")
 
 
 elif page == "AI Clipper":
-    st.title("🎬 AI Video Clipper")
-    st.write("Upload video untuk memulai proses pembuatan clip.")
+    st.markdown("""
+    <div class="hero">
+        <div class="eyebrow">AI VIDEO CREATION</div>
+        <h1>AI Video Clipper</h1>
+        <p>Upload your video. Let AI find the best moments.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     uploaded_file = st.file_uploader(
-        "Pilih video yang ingin diproses",
+        "📤 Upload your video",
         type=["mp4", "mov", "mkv", "avi"],
         help="Maksimal 200 MB"
     )
 
     if uploaded_file:
-        st.success(f"Video berhasil dipilih: {uploaded_file.name}")
+        st.success(f"Video siap diproses: {uploaded_file.name}")
         st.video(uploaded_file)
 
-    st.subheader("⚙️ Pengaturan Video")
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.subheader("⚙️ Processing Settings")
+
     col1, col2 = st.columns(2)
 
     with col1:
         jumlah_clip = st.selectbox(
-            "Jumlah clip", [3, 5, 10, 15, 20], index=1
+            "Jumlah clip",
+            [3, 5, 10, 15, 20],
+            index=1
         )
 
     with col2:
@@ -232,11 +366,12 @@ elif page == "AI Clipper":
         )
 
     st.info(
-        f"Pengaturan: {jumlah_clip} clip • {durasi} detik • Format 9:16"
+        f"Konfigurasi: {jumlah_clip} clips • {durasi} detik • Vertical 9:16"
     )
+    st.markdown('</div>', unsafe_allow_html=True)
 
     if st.button(
-        "🚀 MULAI PROSES VIDEO",
+        "🚀 GENERATE VIDEO CLIPS",
         use_container_width=True,
         disabled=uploaded_file is None
     ):
@@ -244,9 +379,7 @@ elif page == "AI Clipper":
         status = st.empty()
 
         try:
-            suffix = Path(uploaded_file.name).suffix.lower()
-            if not suffix:
-                suffix = ".mp4"
+            suffix = Path(uploaded_file.name).suffix.lower() or ".mp4"
 
             with tempfile.NamedTemporaryFile(
                 delete=False,
@@ -258,18 +391,20 @@ elif page == "AI Clipper":
 
             def update_progress(message):
                 status.info(message)
-                if "transkrip" in message.lower():
+                msg = message.lower()
+
+                if "transkrip" in msg:
                     progress_bar.progress(10)
-                elif "menganalisis" in message.lower():
+                elif "menganalisis" in msg:
                     progress_bar.progress(25)
-                elif "membuat video" in message.lower():
+                elif "membuat video" in msg:
                     progress_bar.progress(45)
-                elif "subtitle video" in message.lower():
+                elif "subtitle video" in msg:
                     progress_bar.progress(65)
-                elif "memasang subtitle" in message.lower():
+                elif "memasang subtitle" in msg:
                     progress_bar.progress(80)
 
-            with st.spinner("CLIPER AI sedang bekerja..."):
+            with st.spinner("CLIPER AI is processing your video..."):
                 output_videos = engine.process_video(
                     source_path,
                     clip_count=jumlah_clip,
@@ -278,6 +413,7 @@ elif page == "AI Clipper":
                 )
 
             progress_bar.progress(100)
+
             status.success(
                 f"Berhasil! {len(output_videos)} video sudah dibuat."
             )
@@ -298,26 +434,40 @@ elif page == "AI Clipper":
             status.error(f"Proses gagal: {error}")
 
     latest = st.session_state.get("latest_outputs", [])
+
     if latest:
         st.divider()
-        st.subheader("Hasil Pemrosesan Terbaru")
+        st.subheader("🎉 Latest Generated Videos")
+
         for video in latest:
             path = Path(video)
+
             if path.exists():
+                st.markdown('<div class="section-card">', unsafe_allow_html=True)
+                st.subheader(path.name)
                 st.video(str(path))
+
                 with open(path, "rb") as f:
                     st.download_button(
-                        "⬇️ Download " + path.name,
+                        "⬇️ DOWNLOAD VIDEO",
                         data=f,
                         file_name=path.name,
                         mime="video/mp4",
-                        key="latest_" + path.name
+                        key="latest_" + path.name,
+                        use_container_width=True
                     )
+
+                st.markdown('</div>', unsafe_allow_html=True)
 
 
 elif page == "Hasil Video":
-    st.title("📂 Hasil Video")
-    st.write("Semua video final yang sudah berhasil dibuat.")
+    st.markdown("""
+    <div class="hero">
+        <div class="eyebrow">YOUR VIDEO LIBRARY</div>
+        <h1>My Video Clips</h1>
+        <p>Watch and download your generated videos.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     videos = get_final_videos()
 
@@ -334,7 +484,7 @@ elif page == "Hasil Video":
 
                 with col2:
                     size_mb = video.stat().st_size / (1024 * 1024)
-                    st.metric("Ukuran File", f"{size_mb:.1f} MB")
+                    st.metric("File Size", f"{size_mb:.1f} MB")
                     st.caption("MP4 • Vertical 9:16")
 
                     with open(video, "rb") as f:
@@ -347,16 +497,15 @@ elif page == "Hasil Video":
                             use_container_width=True
                         )
 
-                st.markdown("</div>", unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
     else:
         st.info("Belum ada video final. Silakan buat clip terlebih dahulu.")
 
 
 elif page == "Tentang":
-    st.title("🌊 Tentang CLIPER AI")
-
     st.markdown("""
     <div class="hero">
+        <div class="eyebrow">ABOUT THE PLATFORM</div>
         <h1>CLIPER AI</h1>
         <p>Intelligent Video Clipping Platform</p>
     </div>
@@ -364,16 +513,16 @@ elif page == "Tentang":
 
     st.markdown("""
     <div class="section-card">
-        <h3>Visi Kami</h3>
+        <h3>🚀 Our Vision</h3>
         <p>Membantu kreator mengubah video panjang menjadi konten pendek dengan lebih mudah dan efisien.</p>
-        <h3>Fitur Platform</h3>
+        <h3>✨ Platform Features</h3>
         <p>• AI video moment analysis berbasis transkrip</p>
         <p>• Automatic video clipping</p>
         <p>• Word-by-word subtitles</p>
         <p>• Vertical video format 9:16</p>
         <p>• Video preview and download</p>
         <br>
-        <h3>Founder & Developer</h3>
+        <h3>👨‍💻 Founder & Developer</h3>
         <p><b>Raihan Zaki</b></p>
     </div>
     """, unsafe_allow_html=True)
