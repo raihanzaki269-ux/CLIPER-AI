@@ -31,6 +31,7 @@ defaults = {
     "user_id": None,
     "user_email": None,
     "full_name": None,
+    "plan": "free",
     "page": "Dashboard",
 }
 
@@ -39,7 +40,7 @@ for key, value in defaults.items():
         st.session_state[key] = value
 
 # =========================
-# LANGUAGE
+# TRANSLATIONS
 # =========================
 TEXT = {
     "Indonesia": {
@@ -89,8 +90,13 @@ TEXT = {
         "check_email": "Pendaftaran berhasil. Silakan cek email untuk verifikasi akun sebelum login.",
         "login_success": "Login berhasil!",
         "register_success": "Akun berhasil dibuat!",
-        "logout_success": "Kamu telah keluar dari akun.",
-        "upload_error": "Terjadi kesalahan saat upload atau memproses video."
+        "plan": "Paket Akun",
+        "free": "FREE",
+        "premium": "PREMIUM",
+        "free_limit": "Paket Free: maksimal 5 klip dan durasi 30 detik.",
+        "premium_info": "Paket Premium: tidak ada batas jumlah klip atau durasi dari aplikasi.",
+        "plan_error": "Tidak dapat membaca paket akun. Akun sementara menggunakan batas Free.",
+        "logout_success": "Kamu telah keluar dari akun."
     },
     "English": {
         "dashboard": "Dashboard",
@@ -111,7 +117,7 @@ TEXT = {
         "processing": "Processing video...",
         "download": "Download Video",
         "empty": "No videos yet. Start processing your first video!",
-        "description": "CLIPER AI is an AI application that turns long videos into short clips with automatic subtitles.",
+        "description": "CLIPER AI turns long videos into short clips with automatic subtitles.",
         "logout": "Log Out",
         "login": "Login",
         "register": "Create Account",
@@ -139,13 +145,18 @@ TEXT = {
         "check_email": "Registration successful. Please check your email to verify your account before logging in.",
         "login_success": "Login successful!",
         "register_success": "Account created successfully!",
-        "logout_success": "You have logged out.",
-        "upload_error": "An error occurred while uploading or processing the video."
+        "plan": "Account Plan",
+        "free": "FREE",
+        "premium": "PREMIUM",
+        "free_limit": "Free plan: maximum 5 clips and 30-second duration.",
+        "premium_info": "Premium plan: no clip-count or duration limit imposed by the app.",
+        "plan_error": "Unable to read account plan. Free limits are temporarily applied.",
+        "logout_success": "You have logged out."
     }
 }
 
 def tr(key):
-    return TEXT[st.session_state.language][key]
+    return TEXT[st.session_state.language].get(key, key)
 
 # =========================
 # STYLE
@@ -210,28 +221,32 @@ div[data-testid="stFileUploader"] {
 </style>
 """, unsafe_allow_html=True)
 
+def show_footer():
+    st.markdown(
+        f'<div class="app-footer">{FOOTER}</div>',
+        unsafe_allow_html=True
+    )
+
 # =========================
 # SUPABASE
 # =========================
 try:
-    config = {
-        "url": st.secrets["supabase"]["url"],
-        "key": st.secrets["supabase"]["publishable_key"]
-    }
-    supabase = create_client(config["url"], config["key"])
+    supabase = create_client(
+        st.secrets["supabase"]["url"],
+        st.secrets["supabase"]["publishable_key"]
+    )
 except Exception:
     st.error("Supabase connection error. Check Streamlit Secrets.")
     st.stop()
 
 def clear_auth():
     for key in [
-        "access_token",
-        "refresh_token",
-        "user_id",
-        "user_email",
-        "full_name"
+        "access_token", "refresh_token", "user_id",
+        "user_email", "full_name"
     ]:
         st.session_state[key] = None
+
+    st.session_state.plan = "free"
 
 def restore_session():
     access = st.session_state.access_token
@@ -276,6 +291,37 @@ def save_auth(response):
 restore_session()
 
 # =========================
+# LOAD USER PLAN
+# =========================
+def load_user_plan():
+    try:
+        result = (
+            supabase.table("profiles")
+            .select("plan")
+            .eq("id", st.session_state.user_id)
+            .limit(1)
+            .execute()
+        )
+
+        if result.data:
+            plan = result.data[0].get("plan", "free")
+            if plan in ("free", "premium"):
+                st.session_state.plan = plan
+                return True
+
+        st.session_state.plan = "free"
+        return False
+
+    except Exception:
+        st.session_state.plan = "free"
+        return False
+
+if st.session_state.user_id:
+    plan_loaded = load_user_plan()
+else:
+    plan_loaded = True
+
+# =========================
 # USER STORAGE
 # =========================
 def get_user_folder():
@@ -288,15 +334,6 @@ def get_user_videos():
     videos = list(folder.glob("*/*_FINAL.mp4"))
     videos.sort(key=lambda p: p.stat().st_mtime, reverse=True)
     return videos
-
-# =========================
-# FOOTER
-# =========================
-def show_footer():
-    st.markdown(
-        f'<div class="app-footer">{FOOTER}</div>',
-        unsafe_allow_html=True
-    )
 
 # =========================
 # AUTH SCREEN
@@ -329,13 +366,9 @@ if not st.session_state.user_id:
         if choice == tr("login"):
             with st.form("login_form"):
                 email = st.text_input(tr("email"))
-                password = st.text_input(
-                    tr("password"),
-                    type="password"
-                )
+                password = st.text_input(tr("password"), type="password")
                 submitted = st.form_submit_button(
-                    tr("login_btn"),
-                    use_container_width=True
+                    tr("login_btn"), use_container_width=True
                 )
 
             if submitted:
@@ -349,12 +382,14 @@ if not st.session_state.user_id:
                             "email": email.strip(),
                             "password": password
                         })
+
                         if save_auth(response):
                             st.success(tr("login_success"))
                             time.sleep(0.5)
                             st.rerun()
                         else:
                             st.error(tr("check_email"))
+
                     except Exception as e:
                         st.error(f"Login gagal: {str(e)}")
 
@@ -362,17 +397,12 @@ if not st.session_state.user_id:
             with st.form("register_form"):
                 full_name = st.text_input(tr("name"))
                 email = st.text_input(tr("email"))
-                password = st.text_input(
-                    tr("password"),
-                    type="password"
-                )
+                password = st.text_input(tr("password"), type="password")
                 confirm = st.text_input(
-                    tr("confirm_password"),
-                    type="password"
+                    tr("confirm_password"), type="password"
                 )
                 submitted = st.form_submit_button(
-                    tr("register_btn"),
-                    use_container_width=True
+                    tr("register_btn"), use_container_width=True
                 )
 
             if submitted:
@@ -390,9 +420,7 @@ if not st.session_state.user_id:
                             "email": email.strip(),
                             "password": password,
                             "options": {
-                                "data": {
-                                    "full_name": full_name.strip()
-                                },
+                                "data": {"full_name": full_name.strip()},
                                 "email_redirect_to": SITE_URL
                             }
                         })
@@ -402,6 +430,7 @@ if not st.session_state.user_id:
                             st.rerun()
                         else:
                             st.success(tr("check_email"))
+
                     except Exception as e:
                         st.error(f"Registrasi gagal: {str(e)}")
 
@@ -430,6 +459,12 @@ with st.sidebar:
     if st.session_state.full_name:
         st.caption(st.session_state.full_name)
 
+    st.markdown(f"**{tr('plan')}:**")
+    if st.session_state.plan == "premium":
+        st.success("💎 PREMIUM")
+    else:
+        st.info("🆓 FREE")
+
     st.divider()
 
     menu_items = [
@@ -453,6 +488,7 @@ with st.sidebar:
             supabase.auth.sign_out()
         except Exception:
             pass
+
         clear_auth()
         st.rerun()
 
@@ -461,6 +497,7 @@ with st.sidebar:
 # =========================
 page = st.session_state.page
 videos = get_user_videos()
+is_premium = st.session_state.plan == "premium"
 
 if page == tr("dashboard"):
 
@@ -477,6 +514,17 @@ if page == tr("dashboard"):
         st.metric(tr("active"), "ACTIVE")
     with c3:
         st.metric(tr("format"), "9:16")
+
+    st.markdown("---")
+
+    st.subheader(tr("plan"))
+
+    if is_premium:
+        st.success("💎 PREMIUM")
+        st.write(tr("premium_info"))
+    else:
+        st.info("🆓 FREE")
+        st.write(tr("free_limit"))
 
     st.markdown("---")
     st.subheader(tr("quick"))
@@ -523,23 +571,28 @@ elif page == tr("clipper"):
     st.write(tr("subtitle"))
     st.markdown("---")
 
+    if is_premium:
+        st.success("💎 PREMIUM — Unlimited app limits")
+        clip_count = st.number_input(
+            tr("count"), min_value=1, value=10, step=1
+        )
+        duration = st.number_input(
+            tr("duration"), min_value=1, value=45, step=1
+        )
+    else:
+        st.info("🆓 FREE — Maximum 5 clips and 30 seconds")
+        clip_count = st.number_input(
+            tr("count"), min_value=1, max_value=5, value=3, step=1
+        )
+        duration = st.number_input(
+            tr("duration"), min_value=1, max_value=30, value=30, step=1
+        )
+
     uploaded_file = st.file_uploader(
         tr("upload"),
         type=["mp4", "mov", "mkv", "avi"],
         help=tr("video_help")
     )
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        clip_count = st.slider(
-            tr("count"), 1, 10, 5
-        )
-
-    with col2:
-        duration = st.slider(
-            tr("duration"), 15, 90, 45
-        )
 
     if uploaded_file:
         st.video(uploaded_file)
@@ -571,8 +624,8 @@ elif page == tr("clipper"):
                 with st.spinner(tr("processing")):
                     output_paths = engine.process_video(
                         str(input_path),
-                        clip_count=clip_count,
-                        duration=duration,
+                        clip_count=int(clip_count),
+                        duration=int(duration),
                         progress=update_progress,
                         output_dir=run_folder
                     )
@@ -668,7 +721,7 @@ elif page == tr("about"):
                 <li>Automatic subtitles</li>
                 <li>Vertical 9:16 video format</li>
                 <li>Personal video library</li>
-                <li>Secure user authentication</li>
+                <li>Free and Premium plans</li>
             </ul>
         </div>
         """,
